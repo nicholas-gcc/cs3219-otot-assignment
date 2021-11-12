@@ -36,11 +36,34 @@ const users = [
 app.get('/posts', authenticateToken, (req, res) => {
     // get user from users array where username matches req.user.username
     const currUser = users.find(u => u.username === req.user.name);
-    console.log(req.user.name);
     if (currUser.role === 'admin') {
         res.json(posts);
     } else {
         res.json(posts.filter(post => post.username === req.user.name));
+    }
+});
+
+// admins can get single post by id and users can get their own post by id
+app.get('/posts/:id', authenticateToken, (req, res) => {
+    // get user from users array where username matches req.user.username
+    console.log(typeof req.params.id);
+    const currUser = users.find(u => u.username === req.user.name);
+    if (currUser.role === 'admin') {
+        const post = posts.find(p => p.id === parseInt(req.params.id));
+        if (!post) {
+            res.status(404).send('Post not found');
+        } else {
+            res.json(post);
+        }
+    } else {
+        const post = posts.find(p => p.id === parseInt(req.params.id));
+        if (post && post.username === req.user.name) {
+            res.json(post);
+        } else if (post) {
+            res.status(403).json({ message: 'You do not have permission to view this post' });
+        } else {
+            res.status(404).send('Post not found');
+        }
     }
 });
 
@@ -57,7 +80,7 @@ app.delete('/posts/:id', authenticateToken, (req, res) => {
             posts.splice(posts.findIndex(p => p.id === parseInt(req.params.id)), 1); // remove post from posts array
             res.json({ message: 'Post deleted' });
         } else if (post) {
-            res.status(401).json({ message: 'You do not have permission to delete this post' });
+            res.status(403).json({ message: 'You do not have permission to delete this post' });
         } else {
             res.status(404).json({ message: 'Post not found' });
         }
